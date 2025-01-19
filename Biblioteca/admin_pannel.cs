@@ -22,6 +22,7 @@ namespace Biblioteca
             LoadBooks(); // Load books when form loads
             LoadAuthors(); // Load authors into ComboBox
             LoadCategories(); // Load categories into ComboBox
+            LoadUsers();
         }
 
         // Load Books from Database
@@ -32,7 +33,7 @@ namespace Biblioteca
             {
                 try
                 {
-                    string query = "SELECT b.title, a.name, c.name, b.available, b.image FROM books b JOIN authors a, categories c WHERE b.author_id = a.author_id AND b.category_id = c.category_id";
+                    string query = "SELECT b.title, a.name AS author, c.name AS genre, b.available FROM books b JOIN authors a, categories c WHERE b.author_id = a.author_id AND b.category_id = c.category_id";
                     MySqlDataAdapter dataAdapter = new MySqlDataAdapter(query, conn);
                     System.Data.DataTable dataTable = new System.Data.DataTable();
                     dataAdapter.Fill(dataTable);
@@ -49,37 +50,60 @@ namespace Biblioteca
             }
         }
 
-        // Add a Book to the Database
         private void btnAddBook_Click(object sender, EventArgs e)
         {
             string title = txtBookTitle.Text;
             string authorId = cmbAuthor.SelectedValue.ToString();  // Selected author ID from ComboBox
             string categoryId = cmbCategory.SelectedValue.ToString();  // Selected category ID from ComboBox
+            string imagePath = textBoxUrl.Text; // Path to the selected image
+            string base64Image = null;
 
+            // Validate inputs
             if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(authorId) || string.IsNullOrEmpty(categoryId))
             {
                 MessageBox.Show("Please fill all fields.");
                 return;
             }
 
+            // Check if an image is selected and convert it to Base64
+            if (!string.IsNullOrEmpty(imagePath))
+            {
+                if (System.IO.File.Exists(imagePath))
+                {
+                    base64Image = ConvertImageToBase64(imagePath);
+                }
+                else
+                {
+                    MessageBox.Show("The selected image file does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+
+            // Connect to the database and save the book details
             MySqlConnection conn = dbConnection.Connect();
             if (conn != null)
             {
                 try
                 {
-                    string query = "INSERT INTO books (title, author_id, category_id) VALUES (@title, @author_id, @category_id)";
+                    // Query to insert book details with image data
+                    string query = @"
+                INSERT INTO books (title, author_id, category_id, image_cnt) 
+                VALUES (@title, @author_id, @category_id, @imageContent)";
+
                     MySqlCommand cmd = new MySqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@title", title);
                     cmd.Parameters.AddWithValue("@author_id", authorId);
                     cmd.Parameters.AddWithValue("@category_id", categoryId);
+                    cmd.Parameters.AddWithValue("@imageName", System.IO.Path.GetFileName(imagePath)); // Save image name
+                    cmd.Parameters.AddWithValue("@imageContent", base64Image); // Save Base64 content
 
                     cmd.ExecuteNonQuery();
                     MessageBox.Show("Book added successfully.");
-                    LoadBooks();  // Refresh the books list
+                    LoadBooks(); // Refresh the books list
                 }
                 catch (MySqlException ex)
                 {
-                    MessageBox.Show($"Error: {ex.Message}");
+                    MessageBox.Show($"Error: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 finally
                 {
@@ -87,6 +111,22 @@ namespace Biblioteca
                 }
             }
         }
+
+
+        private string ConvertImageToBase64(string filePath)
+        {
+            try
+            {
+                byte[] imageBytes = System.IO.File.ReadAllBytes(filePath); // Read the file as bytes
+                return Convert.ToBase64String(imageBytes); // Convert to Base64
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error converting image to Base64: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return null;
+            }
+        }
+
 
         // Load Authors from Database into ComboBox
         private void LoadAuthors()
@@ -143,6 +183,69 @@ namespace Biblioteca
                 }
             }
         }
+
+        // Load Users from Database
+        private void LoadUsers()
+        {
+            MySqlConnection conn = dbConnection.Connect();
+            if (conn != null)
+            {
+                try
+                {
+                    string query = "SELECT user_id, username FROM users"; // Assuming 'users' table has user_id and username
+                    MySqlDataAdapter dataAdapter = new MySqlDataAdapter(query, conn);
+                    DataTable dataTable = new DataTable();
+                    dataAdapter.Fill(dataTable);
+
+                    dgvUsers.DataSource = dataTable; // Bind the data to the DataGridView
+                }
+                catch (MySqlException ex)
+                {
+                    MessageBox.Show($"Error: {ex.Message}");
+                }
+                finally
+                {
+                    dbConnection.CloseConnection(conn);
+                }
+            }
+        }
+
+        // Load Books Borrowed by a Specific User
+        private void LoadBooksByUser(int userId)
+        {
+            MySqlConnection conn = dbConnection.Connect();
+            if (conn != null)
+            {
+                try
+                {
+                    string query = @"
+                SELECT b.title, a.name AS author, c.name AS category, bb.lend_date, bb.return_date
+                FROM lending bb
+                JOIN books b ON bb.book_id = b.book_id
+                JOIN authors a ON b.author_id = a.author_id
+                JOIN categories c ON b.category_id = c.category_id
+                WHERE bb.user_id = @userId";
+
+                    MySqlCommand cmd = new MySqlCommand(query, conn);
+                    cmd.Parameters.AddWithValue("@userId", userId);
+                    MySqlDataAdapter dataAdapter = new MySqlDataAdapter(cmd);
+                    DataTable dataTable = new DataTable();
+                    dataAdapter.Fill(dataTable);
+
+                    dgvBorrowedBooks.DataSource = dataTable;  // Assuming you have a DataGridView for borrowed books
+                }
+                catch (MySqlException ex)
+                {
+                    MessageBox.Show($"Error: {ex.Message}");
+                }
+                finally
+                {
+                    dbConnection.CloseConnection(conn);
+                }
+            }
+        }
+
+
 
         // Add New Author to the Database
         private void btnAddAuthor_Click(object sender, EventArgs e)
@@ -210,6 +313,40 @@ namespace Biblioteca
                 finally
                 {
                     dbConnection.CloseConnection(conn);
+                }
+            }
+        }
+
+        private void dgvUsers_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            //MessageBox.Show("clicked");
+            //MessageBox.Show(dgvUsers.SelectedRows.Count.ToString());
+            if (dgvUsers.SelectedRows.Count > 0)
+            {
+                int userId = Convert.ToInt32(dgvUsers.SelectedRows[0].Cells["user_id"].Value); // Assuming "user_id" column exists
+                LoadBooksByUser(userId); // Load books for the selected user
+            }
+        }
+
+
+        private void admin_pannel_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            Application.Exit(); // Terminates the application completely
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog open = new OpenFileDialog();
+            open.Filter = "Image files (*.jpg; *.jpeg; *.png)|*.jpg;*.jpeg;*.png";
+            if (open.ShowDialog()== DialogResult.OK)
+            {
+                if (System.IO.File.Exists(open.FileName)) // Ensure the file exists
+                {
+                    textBoxUrl.Text = open.FileName; // Display file path in the TextBox
+                }
+                else
+                {
+                    MessageBox.Show("The selected file does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }

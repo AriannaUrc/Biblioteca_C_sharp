@@ -28,10 +28,10 @@ namespace Biblioteca
                 if (ValidateUser(username, password))
                 {
                     MessageBox.Show("Login successful!");
-                    // Navigate to the next form (e.g., Main Menu)
-                    this.Hide();  // Hide the login form
-                    /*FormRegister mainForm = new FormRegister();
-                    mainForm.Show();*/
+                    this.Hide(); // Hide login form
+                    admin_pannel adminPanel = new admin_pannel();
+                    adminPanel.ShowDialog();
+                    this.Close(); // Ensure login form is closed after showing the admin panel
                 }
                 else
                 {
