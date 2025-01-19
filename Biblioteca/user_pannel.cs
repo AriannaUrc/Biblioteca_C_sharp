@@ -27,6 +27,7 @@ namespace Biblioteca
             dbConnection = new DatabaseConnection();
             LoadGenres();
             LoadBooks();
+            LoadBorrowedBooks();
             CheckUserSuspension();
         }
 
@@ -271,6 +272,7 @@ namespace Biblioteca
                             btnBorrow.Hide();
                             btnReturn.Show();
                             LoadBooks();
+                            LoadBorrowedBooks(); // Refresh borrowed books list
                             ResetBookSelection();
                         }
                         else
@@ -307,7 +309,17 @@ namespace Biblioteca
                 if (dgvBooks.SelectedRows.Count > 0)
                 {
                     string title = dgvBooks.SelectedRows[0].Cells["title"].Value.ToString();
-                    int bookId = Convert.ToInt32(dgvBooks.SelectedRows[0].Cells["book_id"].Value);
+
+                    int bookId = -1;
+                    if (tabControl1.SelectedTab == tabPage2)
+                    {
+                        bookId = Convert.ToInt32(dgvBorrowedBooks.SelectedRows[0].Cells["book_id"].Value);
+                    }
+                    else if (tabControl1.SelectedTab == tabPage1)
+                    {
+                        bookId = Convert.ToInt32(dgvBooks.SelectedRows[0].Cells["book_id"].Value);
+                    }
+                    
                     DateTime returnDate = DateTime.Now;
 
                     conn = dbConnection.Connect();
@@ -343,6 +355,8 @@ namespace Biblioteca
                             btnBorrow.Show();
                             btnReturn.Hide();
                             LoadBooks();
+                            LoadBorrowedBooks(); // Refresh borrowed books list
+                            ResetBorrowedBookSelection();
                             ResetBookSelection();
                         }
                         else
@@ -376,6 +390,16 @@ namespace Biblioteca
                 dgvBooks.ClearSelection(); // Clear existing selection
                 dgvBooks.Rows[0].Selected = true; // Select the first row by default
                 dgvBooks_SelectionChanged(null, null); // Trigger selection changed logic
+            }
+        }
+
+        private void ResetBorrowedBookSelection()
+        {
+            if (dgvBorrowedBooks.Rows.Count > 0)
+            {
+                dgvBorrowedBooks.ClearSelection(); // Clear existing selection
+                dgvBorrowedBooks.Rows[0].Selected = true; // Select the first row by default
+                dgvBorrowedBooks_SelectionChanged(null, null); // Trigger selection changed logic
             }
         }
 
@@ -436,5 +460,86 @@ namespace Biblioteca
             }
         }
 
+
+        private void LoadBorrowedBooks()
+        {
+            try
+            {
+                conn = dbConnection.Connect();
+                string query = @"SELECT b.book_id, b.title, c.name AS genre, b.image_cnt 
+                         FROM books b 
+                         JOIN categories c ON b.category_id = c.category_id
+                         JOIN lending l ON b.book_id = l.book_id
+                         WHERE l.user_id = @userId AND l.return_date IS NULL";
+
+                MySqlCommand cmd = new MySqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@userId", userId);
+
+                MySqlDataAdapter dataAdapter = new MySqlDataAdapter(cmd);
+                DataTable borrowedBooksTable = new DataTable();
+
+                dataAdapter.Fill(borrowedBooksTable);
+
+                if (borrowedBooksTable.Rows.Count > 0)
+                {
+                    dgvBorrowedBooks.DataSource = null; // Clear the existing data source
+                    dgvBorrowedBooks.DataSource = borrowedBooksTable; // Assign the new data source
+                    dgvBorrowedBooks.Columns["image_cnt"].Visible = false; // Hide the 'image_cnt' column
+                }
+                else
+                {
+                    //MessageBox.Show("No borrowed books found.");
+                }
+
+                dbConnection.CloseConnection(conn);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error loading borrowed books: " + ex.Message);
+            }
+        }
+
+        private void dgvBorrowedBooks_SelectionChanged(object sender, EventArgs e)
+        {
+            if (dgvBorrowedBooks.SelectedRows.Count > 0)
+            {
+                var selectedRow = dgvBorrowedBooks.SelectedRows[0];
+                string title = selectedRow.Cells["title"].Value.ToString();
+                string genre = selectedRow.Cells["genre"].Value.ToString();
+                string imageBase64 = selectedRow.Cells["image_cnt"].Value.ToString();
+                int bookId = Convert.ToInt32(selectedRow.Cells["book_id"].Value);
+
+                lblTitle.Text = "Title: " + title;
+                lblGenre.Text = "Genre: " + genre;
+
+                // Display the image
+                DisplayBookImage(imageBase64);
+
+                btnBorrow.Hide();
+                btnReturn.Show();
+
+                // Additional author details
+                DisplayAuthorInfo(title);
+            }
+        }
+
+
+        private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (tabControl1.SelectedTab == tabPage2)
+            {
+                LoadBorrowedBooks();
+                ResetBorrowedBookSelection(); // Optional, to refresh the selection
+            }
+            else if (tabControl1.SelectedTab == tabPage1)
+            {
+                LoadBooks();
+            }
+        }
+
+
+
     }
+
+
 }
