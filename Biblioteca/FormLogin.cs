@@ -19,18 +19,21 @@ namespace Biblioteca
 
             if(username == "admin" && password == "adminpass")
             {
-                this.Hide();
-                admin_pannel admin = new admin_pannel();
-                admin.Show();
+                MessageBox.Show("Login successful!");
+                this.Hide(); // Hide login form
+                admin_pannel adminPanel = new admin_pannel();
+                adminPanel.ShowDialog();
+                this.Close(); // Ensure login form is closed after showing the admin panel
             }
             else
             {
-                if (ValidateUser(username, password))
+                int id = ValidateUser(username, password);
+                if (id != -1)
                 {
                     MessageBox.Show("Login successful!");
                     this.Hide(); // Hide login form
-                    admin_pannel adminPanel = new admin_pannel();
-                    adminPanel.ShowDialog();
+                    user_pannel userPanel = new user_pannel(id);
+                    userPanel.ShowDialog();
                     this.Close(); // Ensure login form is closed after showing the admin panel
                 }
                 else
@@ -40,8 +43,9 @@ namespace Biblioteca
             }
         }
 
-        private bool ValidateUser(string username, string password)
+        private int ValidateUser(string username, string password)
         {
+            int user_id = -1;
             bool isValid = false;
             string connString = "Server=127.0.0.1;Port=3306;Database=library_db;Uid=root;Pwd=;";  // Update this if needed
 
@@ -50,7 +54,7 @@ namespace Biblioteca
                 try
                 {
                     conn.Open();
-                    string query = "SELECT username, password FROM users WHERE username = @username";
+                    string query = "SELECT username, password, user_id FROM users WHERE username = @username";
                     MySqlCommand cmd = new MySqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@username", username);
 
@@ -63,8 +67,9 @@ namespace Biblioteca
                             if (BCrypt.Net.BCrypt.Verify(password, storedPasswordHash))
                             {
                                 isValid = true; // Login is valid
-                                MessageBox.Show("hello: " + username);
+                                //MessageBox.Show("hello: " + username);
                             }
+                            user_id = (Int32)reader["user_id"];
                         }
                     }
                 }
@@ -73,7 +78,7 @@ namespace Biblioteca
                     MessageBox.Show("Error: " + ex.Message);
                 }
             }
-            return isValid;
+            return user_id;
         }
     }
 }
