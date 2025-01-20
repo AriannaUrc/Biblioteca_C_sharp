@@ -33,7 +33,7 @@ namespace Biblioteca
             {
                 try
                 {
-                    string query = "SELECT b.title, a.name AS author, c.name AS genre, b.available FROM books b JOIN authors a, categories c WHERE b.author_id = a.author_id AND b.category_id = c.category_id";
+                    string query = "SELECT b.book_id, b.title, a.name AS author, c.name AS genre, b.available FROM books b JOIN authors a, categories c WHERE b.author_id = a.author_id AND b.category_id = c.category_id";
                     MySqlDataAdapter dataAdapter = new MySqlDataAdapter(query, conn);
                     System.Data.DataTable dataTable = new System.Data.DataTable();
                     dataAdapter.Fill(dataTable);
@@ -471,6 +471,58 @@ namespace Biblioteca
             }
         }
 
+        private void btnDeleteBook_Click(object sender, EventArgs e)
+        {
+            // Check if a book is selected in the DataGridView
+            if (dgvBooks.SelectedRows.Count > 0)
+            {
+                // Get the title of the selected book (assuming the title is in the first column)
+                string title = dgvBooks.SelectedRows[0].Cells["title"].Value.ToString();
+
+                // Confirm the deletion with the user
+                DialogResult result = MessageBox.Show($"Are you sure you want to delete the book '{title}'?",
+                                                      "Confirm Deletion",
+                                                      MessageBoxButtons.YesNo,
+                                                      MessageBoxIcon.Warning);
+
+                if (result == DialogResult.Yes)
+                {
+                    // Get the book_id or any unique identifier from the selected row
+                    int bookId = Convert.ToInt32(dgvBooks.SelectedRows[0].Cells["book_id"].Value);
+
+                    // Connect to the database and delete the selected book
+                    MySqlConnection conn = dbConnection.Connect();
+                    if (conn != null)
+                    {
+                        try
+                        {
+                            string query = "DELETE FROM books WHERE book_id = @bookId"; // Use the unique book identifier (book_id)
+                            MySqlCommand cmd = new MySqlCommand(query, conn);
+                            cmd.Parameters.AddWithValue("@bookId", bookId);
+
+                            // Execute the delete command
+                            cmd.ExecuteNonQuery();
+                            MessageBox.Show("Book deleted successfully.");
+
+                            // Refresh the book list
+                            LoadBooks();
+                        }
+                        catch (MySqlException ex)
+                        {
+                            MessageBox.Show($"Error: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                        finally
+                        {
+                            dbConnection.CloseConnection(conn);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please select a book to delete.", "No Book Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
 
     }
 }

@@ -46,6 +46,7 @@
             button1 = new Button();
             textBoxUrl = new TextBox();
             btnModifyBook = new Button();
+            btnDeleteBook = new Button();
             ((System.ComponentModel.ISupportInitialize)dgvBooks).BeginInit();
             ((System.ComponentModel.ISupportInitialize)dgvUsers).BeginInit();
             ((System.ComponentModel.ISupportInitialize)dgvBorrowedBooks).BeginInit();
@@ -59,6 +60,7 @@
             dgvBooks.Location = new Point(37, 36);
             dgvBooks.Name = "dgvBooks";
             dgvBooks.ReadOnly = true;
+            dgvBooks.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvBooks.Size = new Size(343, 202);
             dgvBooks.TabIndex = 0;
             // 
@@ -78,7 +80,7 @@
             // 
             // txtCategoryName
             // 
-            txtCategoryName.Location = new Point(657, 157);
+            txtCategoryName.Location = new Point(657, 134);
             txtCategoryName.Name = "txtCategoryName";
             txtCategoryName.Size = new Size(100, 23);
             txtCategoryName.TabIndex = 3;
@@ -111,7 +113,7 @@
             // 
             // btnAddCategory
             // 
-            btnAddCategory.Location = new Point(657, 188);
+            btnAddCategory.Location = new Point(657, 165);
             btnAddCategory.Name = "btnAddCategory";
             btnAddCategory.Size = new Size(98, 23);
             btnAddCategory.TabIndex = 7;
@@ -214,11 +216,22 @@
             btnModifyBook.UseVisualStyleBackColor = true;
             btnModifyBook.Click += btnModifyBook_Click;
             // 
+            // btnDeleteBook
+            // 
+            btnDeleteBook.Location = new Point(282, 244);
+            btnDeleteBook.Name = "btnDeleteBook";
+            btnDeleteBook.Size = new Size(98, 23);
+            btnDeleteBook.TabIndex = 18;
+            btnDeleteBook.Text = "Delete Book";
+            btnDeleteBook.UseVisualStyleBackColor = true;
+            btnDeleteBook.Click += btnDeleteBook_Click;
+            // 
             // admin_pannel
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(btnDeleteBook);
             Controls.Add(btnModifyBook);
             Controls.Add(textBoxUrl);
             Controls.Add(button1);
@@ -268,5 +281,6 @@
         private Button button1;
         private TextBox textBoxUrl;
         private Button btnModifyBook;
+        private Button btnDeleteBook;
     }
 }
