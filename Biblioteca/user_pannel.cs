@@ -149,10 +149,18 @@ namespace Biblioteca
 
         private void btnSearch_Click(object sender, EventArgs e)
         {
-            string searchTitle = txtSearch.Text;
-            string genre = cmbGenre.SelectedValue?.ToString();
-            LoadBooks(searchTitle, genre);
+            if (tabControl1.SelectedTab == tabPage1) // Ensure search applies to the All Books tab
+            {
+                string searchTitle = txtSearch.Text;
+                string genre = cmbGenre.SelectedValue?.ToString();
+                LoadBooks(searchTitle, genre);
+            }
+            else
+            {
+                MessageBox.Show("Search is only available in the All Books tab.");
+            }
         }
+
 
         private void dgvBooks_SelectionChanged(object sender, EventArgs e)
         {
@@ -174,19 +182,9 @@ namespace Biblioteca
 
                 if (!available)
                 {
-                    // Check who borrowed the book
-                    if (IsBookBorrowedByCurrentUser(bookId))
-                    {
-                        // User borrowed this book
-                        btnBorrow.Hide();
-                        btnReturn.Show();
-                    }
-                    else
-                    {
-                        // Another user borrowed the book
-                        btnBorrow.Hide();
-                        btnReturn.Hide();
-                    }
+                    // Another user borrowed the book
+                    btnBorrow.Hide();
+                    btnReturn.Hide();
                 }
                 else
                 {
@@ -306,20 +304,9 @@ namespace Biblioteca
         {
             try
             {
-                if (dgvBooks.SelectedRows.Count > 0)
+                if (dgvBorrowedBooks.SelectedRows.Count > 0)
                 {
-                    string title = dgvBooks.SelectedRows[0].Cells["title"].Value.ToString();
-
-                    int bookId = -1;
-                    if (tabControl1.SelectedTab == tabPage2)
-                    {
-                        bookId = Convert.ToInt32(dgvBorrowedBooks.SelectedRows[0].Cells["book_id"].Value);
-                    }
-                    else if (tabControl1.SelectedTab == tabPage1)
-                    {
-                        bookId = Convert.ToInt32(dgvBooks.SelectedRows[0].Cells["book_id"].Value);
-                    }
-                    
+                    int bookId = Convert.ToInt32(dgvBorrowedBooks.SelectedRows[0].Cells["book_id"].Value);
                     DateTime returnDate = DateTime.Now;
 
                     conn = dbConnection.Connect();
@@ -352,12 +339,22 @@ namespace Biblioteca
                         if (rowsAffected > 0)
                         {
                             MessageBox.Show("You have successfully returned the book!");
-                            btnBorrow.Show();
-                            btnReturn.Hide();
-                            LoadBooks();
-                            LoadBorrowedBooks(); // Refresh borrowed books list
-                            ResetBorrowedBookSelection();
-                            ResetBookSelection();
+
+                            // Refresh the borrowed books grid
+                            LoadBorrowedBooks();
+                            
+
+                            // Remove the returned book from the DataGridView
+                            foreach (DataGridViewRow row in dgvBorrowedBooks.Rows)
+                            {
+                                if (Convert.ToInt32(row.Cells["book_id"].Value) == bookId)
+                                {
+                                    dgvBorrowedBooks.Rows.Remove(row);
+                                    break;
+                                }
+                            }
+
+                            ResetBorrowedBookSelection(); // Ensure the first row is selected if there are remaining books
                         }
                         else
                         {
@@ -375,12 +372,17 @@ namespace Biblioteca
                         dbConnection.CloseConnection(conn);
                     }
                 }
+                else if(dgvBooks.Rows.Count > 0)
+                {
+
+                }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error returning book: " + ex.Message);
             }
         }
+
 
 
         private void ResetBookSelection()
@@ -391,17 +393,32 @@ namespace Biblioteca
                 dgvBooks.Rows[0].Selected = true; // Select the first row by default
                 dgvBooks_SelectionChanged(null, null); // Trigger selection changed logic
             }
+
         }
 
         private void ResetBorrowedBookSelection()
         {
             if (dgvBorrowedBooks.Rows.Count > 0)
             {
-                dgvBorrowedBooks.ClearSelection(); // Clear existing selection
-                dgvBorrowedBooks.Rows[0].Selected = true; // Select the first row by default
-                dgvBorrowedBooks_SelectionChanged(null, null); // Trigger selection changed logic
+                dgvBorrowedBooks.ClearSelection();
+                dgvBorrowedBooks.CurrentCell = dgvBorrowedBooks.Rows[0].Cells[0]; // Set focus to the first cell
+                dgvBorrowedBooks.Rows[0].Selected = true; // Select the first row
+                dgvBorrowedBooks_SelectionChanged(null, null); // Manually trigger selection logic
+            }
+            else
+            {
+                // Clear displayed details if there are no rows
+                lblTitle.Text = "Title: N/A";
+                lblGenre.Text = "Genre: N/A";
+                lblAuthor.Text = "Author: N/A";
+                picBookImage.Image = null;
+                btnReturn.Hide();
+                btnBorrow.Hide();
             }
         }
+
+
+
 
 
         private void DisplayAuthorInfo(string title)
@@ -529,16 +546,14 @@ namespace Biblioteca
             if (tabControl1.SelectedTab == tabPage2)
             {
                 LoadBorrowedBooks();
-                ResetBorrowedBookSelection(); // Optional, to refresh the selection
+                ResetBorrowedBookSelection(); // Ensure the first row is selected
             }
             else if (tabControl1.SelectedTab == tabPage1)
             {
                 LoadBooks();
+                ResetBookSelection(); // Optional, if you want to reset book selection in the available books tab
             }
         }
-
-
-
     }
 
 
