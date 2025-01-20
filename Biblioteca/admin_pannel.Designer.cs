@@ -45,6 +45,7 @@
             label4 = new Label();
             button1 = new Button();
             textBoxUrl = new TextBox();
+            btnModifyBook = new Button();
             ((System.ComponentModel.ISupportInitialize)dgvBooks).BeginInit();
             ((System.ComponentModel.ISupportInitialize)dgvUsers).BeginInit();
             ((System.ComponentModel.ISupportInitialize)dgvBorrowedBooks).BeginInit();
@@ -120,9 +121,9 @@
             // 
             // btnAddBook
             // 
-            btnAddBook.Location = new Point(443, 215);
+            btnAddBook.Location = new Point(416, 215);
             btnAddBook.Name = "btnAddBook";
-            btnAddBook.Size = new Size(99, 23);
+            btnAddBook.Size = new Size(85, 23);
             btnAddBook.TabIndex = 8;
             btnAddBook.Text = "Add Book";
             btnAddBook.UseVisualStyleBackColor = true;
@@ -203,11 +204,22 @@
             textBoxUrl.Size = new Size(121, 23);
             textBoxUrl.TabIndex = 16;
             // 
+            // btnModifyBook
+            // 
+            btnModifyBook.Location = new Point(508, 215);
+            btnModifyBook.Name = "btnModifyBook";
+            btnModifyBook.Size = new Size(87, 23);
+            btnModifyBook.TabIndex = 17;
+            btnModifyBook.Text = "Modify Book";
+            btnModifyBook.UseVisualStyleBackColor = true;
+            btnModifyBook.Click += btnModifyBook_Click;
+            // 
             // admin_pannel
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(btnModifyBook);
             Controls.Add(textBoxUrl);
             Controls.Add(button1);
             Controls.Add(label4);
@@ -255,5 +267,6 @@
         private Label label4;
         private Button button1;
         private TextBox textBoxUrl;
+        private Button btnModifyBook;
     }
 }

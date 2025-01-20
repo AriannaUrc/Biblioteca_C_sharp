@@ -338,7 +338,7 @@ namespace Biblioteca
         {
             OpenFileDialog open = new OpenFileDialog();
             open.Filter = "Image files (*.jpg; *.jpeg; *.png)|*.jpg;*.jpeg;*.png";
-            if (open.ShowDialog()== DialogResult.OK)
+            if (open.ShowDialog() == DialogResult.OK)
             {
                 if (System.IO.File.Exists(open.FileName)) // Ensure the file exists
                 {
@@ -350,5 +350,127 @@ namespace Biblioteca
                 }
             }
         }
+
+        private void btnModifyBook_Click(object sender, EventArgs e)
+        {
+            string title = txtBookTitle.Text; // Book title to search for
+
+            // Check if title is empty
+            if (string.IsNullOrEmpty(title))
+            {
+                MessageBox.Show("Please enter the book title to modify.");
+                return;
+            }
+
+            // Ensure that ComboBox values are valid before accessing them
+            string authorId = cmbAuthor.SelectedValue?.ToString();  // Use null-conditional operator
+            string categoryId = cmbCategory.SelectedValue?.ToString();  // Use null-conditional operator
+            string imagePath = textBoxUrl.Text; // Path to the selected image
+            string base64Image = null;
+
+            // If ComboBox values are null, display an error message
+            if (string.IsNullOrEmpty(authorId))
+            {
+                MessageBox.Show("Please select an author.");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(categoryId))
+            {
+                MessageBox.Show("Please select a category.");
+                return;
+            }
+
+            // Convert image to Base64 only if it's provided
+            if (!string.IsNullOrEmpty(imagePath))
+            {
+                if (System.IO.File.Exists(imagePath))
+                {
+                    base64Image = ConvertImageToBase64(imagePath);
+                }
+                else
+                {
+                    MessageBox.Show("The selected image file does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+
+            // Connect to the database to check and update book details
+            MySqlConnection conn = dbConnection.Connect();
+            if (conn != null)
+            {
+                try
+                {
+                    // Check if the book exists
+                    string checkQuery = "SELECT COUNT(*) FROM books WHERE title = @title";
+                    MySqlCommand checkCmd = new MySqlCommand(checkQuery, conn);
+                    checkCmd.Parameters.AddWithValue("@title", title);
+
+                    int bookExists = Convert.ToInt32(checkCmd.ExecuteScalar());
+
+                    if (bookExists > 0)
+                    {
+                        // Create the query dynamically based on which fields are updated
+                        StringBuilder updateQuery = new StringBuilder("UPDATE books SET ");
+
+                        // List to hold parameters for dynamic SQL query
+                        List<MySqlParameter> parameters = new List<MySqlParameter>();
+
+                        // If the author is changed, add to the query
+                        if (!string.IsNullOrEmpty(authorId))
+                        {
+                            updateQuery.Append("author_id = @author_id, ");
+                            parameters.Add(new MySqlParameter("@author_id", authorId));
+                        }
+
+                        // If the category is changed, add to the query
+                        if (!string.IsNullOrEmpty(categoryId))
+                        {
+                            updateQuery.Append("category_id = @category_id, ");
+                            parameters.Add(new MySqlParameter("@category_id", categoryId));
+                        }
+
+                        // If the image is changed, add to the query
+                        if (!string.IsNullOrEmpty(base64Image))
+                        {
+                            updateQuery.Append("image_cnt = @imageContent, ");
+                            parameters.Add(new MySqlParameter("@imageContent", base64Image));
+                        }
+
+                        // Remove the last comma and space from the query
+                        if (updateQuery.ToString().EndsWith(", "))
+                        {
+                            updateQuery.Length -= 2; // Remove the last ", "
+                        }
+
+                        // Add the WHERE clause to ensure we update the correct book
+                        updateQuery.Append(" WHERE title = @title");
+                        parameters.Add(new MySqlParameter("@title", title));
+
+                        // Execute the update command
+                        MySqlCommand updateCmd = new MySqlCommand(updateQuery.ToString(), conn);
+                        updateCmd.Parameters.AddRange(parameters.ToArray());
+
+                        updateCmd.ExecuteNonQuery();
+                        MessageBox.Show("Book details updated successfully.");
+                        LoadBooks(); // Refresh the books list
+                    }
+                    else
+                    {
+                        MessageBox.Show("The book title does not exist in the database.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+                catch (MySqlException ex)
+                {
+                    MessageBox.Show($"Error: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    dbConnection.CloseConnection(conn);
+                }
+            }
+        }
+
+
     }
 }
